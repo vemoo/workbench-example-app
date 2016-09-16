@@ -6,6 +6,7 @@ import org.scalajs.dom.ext.KeyValue
 
 import scala.scalajs.js.annotation.JSExport
 import scalajs.js
+import org.scalajs.dom.console
 
 case class Task(id: Int, txt: String, done: Boolean) {
   override def equals(obj: scala.Any): Boolean = obj match {
@@ -99,27 +100,31 @@ object ScalaJSExample {
                       }
                     )
                   ),
-                  if (state.editing.contains(task))
-                    input(cls := "edit", value := state.editing.map(_.txt),
-                      onInput ==> { e: ReactEventI =>
-                        $.setState(state.copy(editing = state.editing.map(_.copy(txt = e.target.value.trim))))
-                      },
-                      onKeyUp ==> { e: ReactKeyboardEventI =>
-                        (e.key, state.editing) match {
-                          case (KeyValue.Enter, Some(editing)) =>
+                  state.editing match {
+                    case Some(editing) =>
+                      input(cls := "edit", value := editing.txt,
+                        onInput ==> { e: ReactEventI =>
+                          $.setState(state.copy(editing = state.editing.map(_.copy(txt = e.target.value.trim))))
+                        },
+                        onKeyUp ==> { e: ReactKeyboardEventI =>
+                          if (e.key == KeyValue.Enter)
                             $.setState(state.copy(tasks = state.tasks.map { t =>
                               if (t == editing)
                                 t.copy(txt = editing.txt)
                               else t
                             }, editing = None))
-                          case _ => Callback(())
-                        }
-                      },
-                      onBlur --> {
-                        $.setState(state.copy(editing = None))
-                      }
-                    )
-                  else ""
+                          else if (e.key == KeyValue.Escape)
+                            $.setState(state.copy(editing = None))
+                          else
+                            Callback(())
+                        },
+                        onBlur --> {
+                          $.setState(state.copy(editing = None))
+                        },
+                        ref((e: org.scalajs.dom.raw.HTMLInputElement) => if (e != null) e.focus())
+                      )
+                    case None => ""
+                  }
                 )
               }
             ),

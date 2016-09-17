@@ -43,7 +43,6 @@ object ScalaJSExample {
               id := "new-todo",
               cls := "new-todo",
               placeholder := "What needs to be done?",
-              "autofocus".reactAttr := true,
               onKeyUp ==> { e: ReactKeyboardEventI =>
                 if (e.key == KeyValue.Enter && e.target.value.trim.nonEmpty) {
                   val newId = if (state.tasks.isEmpty) 1 else state.tasks.map(_.id).max + 1
@@ -52,7 +51,8 @@ object ScalaJSExample {
                   $.setState(state.copy(tasks = newTask +: state.tasks))
                 }
                 else Callback(())
-              }
+              },
+              autoFocus := state.editing.isEmpty
             )
           ),
           section(cls := "main")(
@@ -61,8 +61,9 @@ object ScalaJSExample {
               cls := "toggle-all",
               tpe := "checkbox",
               cursor := "pointer",
-              onClick --> {
-                $.setState(state.copy(tasks = state.tasks.map(_.copy(done = true))))
+              checked := state.tasks.nonEmpty && state.tasks.forall(_.done),
+              onClick ==> { e: ReactUIEventI =>
+                $.setState(state.copy(tasks = state.tasks.map(_.copy(done = e.target.checked))))
               }
             ),
             label(`for` := "toggle-all", "Mark all as complete"),
@@ -121,7 +122,7 @@ object ScalaJSExample {
                         onBlur --> {
                           $.setState(state.copy(editing = None))
                         },
-                        ref((e: org.scalajs.dom.raw.HTMLInputElement) => if (e != null) e.focus())
+                        autoFocus := true
                       )
                     case None => ""
                   }
@@ -195,13 +196,18 @@ object ScalaJSExample {
 
     def add100(done: => Unit): Unit = {
       def it(inp: HTMLInputElement, i: Int, lim: Int, done: => Unit): Unit = {
-        if (i < lim) {
+        def enter: Unit = {
           setTimeout(() => {
-            inp.value = s"Todo number $i"
             inp.dispatchEvent(enterEvent)
             it(inp, i + 1, lim, done)
           }, 0)
-        } else done
+        }
+        setTimeout(() => {
+          if (i < lim) {
+            inp.value = s"Todo number $i"
+            enter
+          } else done
+        }, 0)
       }
 
       val inp = getElementById("new-todo").asInstanceOf[HTMLInputElement]
@@ -211,12 +217,13 @@ object ScalaJSExample {
     def toggleAll(done: => Unit): Unit = {
 
       def it(ns: NodeList, i: Int, done: => Unit): Unit = {
-        if (i < ns.length) {
-          setTimeout({ () =>
+        setTimeout({ () =>
+          if (i < ns.length) {
             ns(i).dispatchEvent(clickEvent)
             it(ns, i + 1, done)
-          }, 0)
-        } else done
+          }
+          else done
+        }, 0)
       }
       val all = querySelectorAll("input.toggle")
       it(all, 0, done)

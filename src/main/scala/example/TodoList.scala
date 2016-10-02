@@ -130,15 +130,15 @@ object TodoList {
           footer(cls := "footer")(
             span(cls := "todo-count")(strong(state.tasks.count(!_.done)), " item left"),
             ul(cls := "filters")(
-              allFilters.map { f =>
+              for (filter <- allFilters) yield {
                 li(a(
                   cls := {
-                    if (f == props.filter) "selected"
+                    if (filter == props.filter) "selected"
                     else ""
                   },
-                  f.toString,
+                  filter.toString,
                   href := "#",
-                  props.ctl.setOnClick(f)
+                  props.ctl.setOnClick(filter)
                 ))
               }
             ),
@@ -169,10 +169,12 @@ object TodoList {
   val routerConfig = RouterConfigDsl[Filter].buildConfig { dsl =>
     import dsl._
 
+    def renderFilter(filter: Filter) = renderR(ctl => component(Props(filter, ctl)))
+
     (trimSlashes
-      | staticRoute("#all", All) ~> renderR(ctl => component(Props(All, ctl)))
-      | staticRoute("#done", Done) ~> renderR(ctl => component(Props(Done, ctl)))
-      | staticRoute("#undone", Undone) ~> renderR(ctl => component(Props(Undone, ctl)))
+      | staticRoute("#all", All) ~> renderFilter(All)
+      | staticRoute("#done", Done) ~> renderFilter(Done)
+      | staticRoute("#undone", Undone) ~> renderFilter(Undone)
       )
       .notFound(redirectToPage(All)(Redirect.Replace))
 

@@ -14,8 +14,11 @@ version := "0.1-SNAPSHOT"
 libraryDependencies ++= Seq(
   "org.scala-js" %%% "scalajs-dom" % "0.9.0",
   "com.github.japgolly.scalajs-react" %%% "core" % "0.11.2",
-  "com.github.japgolly.scalajs-react" %%% "extra" % "0.11.2"
+  "com.github.japgolly.scalajs-react" %%% "extra" % "0.11.2",
+  "com.beachape" %%% "enumeratum" % "1.4.15"
 )
+
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings")
 
 bootSnippet := "example.ScalaJSExample().main()"
 

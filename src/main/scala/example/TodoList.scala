@@ -4,6 +4,7 @@ import japgolly.scalajs.react.{BackendScope, _}
 import japgolly.scalajs.react.extra.router.{RouterCtl, _}
 import japgolly.scalajs.react.vdom.all._
 import org.scalajs.dom.ext.KeyValue
+import enumeratum._
 
 object TodoList {
 
@@ -14,24 +15,28 @@ object TodoList {
     }
   }
 
-  sealed trait Filter
-  case object All extends Filter
-  case object Done extends Filter
-  case object Undone extends Filter
+  sealed trait Filter extends EnumEntry
+
+  object Filter extends Enum[Filter] {
+    val values = findValues
+
+    case object All extends Filter
+    case object Done extends Filter
+    case object Undone extends Filter
+  }
+
+  def getFilterFn(f: Filter): Task => Boolean = f match {
+    case Filter.All => _ => true
+    case Filter.Done => _.done
+    case Filter.Undone => !_.done
+  }
+
 
   case class State(tasks: Seq[Task], editing: Option[Task])
   case class Props(filter: Filter, ctl: RouterCtl[Filter])
 
 
   val initialState = State(Seq(), None)
-
-  def getFilterFn(f: Filter): Task => Boolean = f match {
-    case All => _ => true
-    case Done => _.done
-    case Undone => !_.done
-  }
-
-  val allFilters = Seq(All, Done, Undone)
 
 
   class Backend($: BackendScope[Props, State]) {
@@ -130,7 +135,7 @@ object TodoList {
           footer(cls := "footer")(
             span(cls := "todo-count")(strong(state.tasks.count(!_.done)), " item left"),
             ul(cls := "filters")(
-              for (filter <- allFilters) yield {
+              for (filter <- Filter.values) yield {
                 li(a(
                   cls := {
                     if (filter == props.filter) "selected"
@@ -169,14 +174,15 @@ object TodoList {
   val routerConfig = RouterConfigDsl[Filter].buildConfig { dsl =>
     import dsl._
 
-    def renderFilter(filter: Filter) = renderR(ctl => component(Props(filter, ctl)))
+    def filterRule(route: String, filter: Filter): Rule =
+      staticRoute(route, filter) ~> renderR(ctl => component(Props(filter, ctl)))
 
     (trimSlashes
-      | staticRoute("#all", All) ~> renderFilter(All)
-      | staticRoute("#done", Done) ~> renderFilter(Done)
-      | staticRoute("#undone", Undone) ~> renderFilter(Undone)
+      | filterRule("#all", Filter.All)
+      | filterRule("#done", Filter.Done)
+      | filterRule("#undone", Filter.Undone)
       )
-      .notFound(redirectToPage(All)(Redirect.Replace))
+      .notFound(redirectToPage(Filter.All)(Redirect.Replace))
 
   }
 

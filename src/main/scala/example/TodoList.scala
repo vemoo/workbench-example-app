@@ -142,8 +142,7 @@ object TodoList {
                     else ""
                   },
                   filter.toString,
-                  href := "#",
-                  props.ctl.setOnClick(filter)
+                  href := props.ctl.urlFor(filter).value
                 ))
               }
             ),

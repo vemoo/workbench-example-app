@@ -1,36 +1,12 @@
-package todomvc.react
+package todomvc.reactImpl
 
 import japgolly.scalajs.react.{BackendScope, _}
 import japgolly.scalajs.react.extra.router.{RouterCtl, _}
 import japgolly.scalajs.react.vdom.all._
 import org.scalajs.dom.ext.KeyValue
-import enumeratum._
+import todomvc._
 
 object TodoList {
-
-  case class Task(id: Int, txt: String, done: Boolean) {
-    override def equals(obj: scala.Any): Boolean = obj match {
-      case Task(otherId, _, _) => id == otherId
-      case _ => false
-    }
-  }
-
-  sealed trait Filter extends EnumEntry
-
-  object Filter extends Enum[Filter] {
-    val values = findValues
-
-    case object All extends Filter
-    case object Done extends Filter
-    case object Undone extends Filter
-  }
-
-  def getFilterFn(f: Filter): Task => Boolean = f match {
-    case Filter.All => _ => true
-    case Filter.Done => _.done
-    case Filter.Undone => !_.done
-  }
-
 
   case class State(tasks: Seq[Task], editing: Option[Task])
   case class Props(filter: Filter, ctl: RouterCtl[Filter])

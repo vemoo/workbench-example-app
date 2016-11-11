@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings")
 
-bootSnippet := "todomvc.sri.JSMain().main()"
+bootSnippet := "todomvc.JSMain().main()"
 
 updateBrowsers <<= updateBrowsers.triggeredBy(fastOptJS in Compile)
 

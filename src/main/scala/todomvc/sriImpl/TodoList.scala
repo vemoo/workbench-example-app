@@ -1,44 +1,26 @@
-package todomvc.sri
+package todomvc.sriImpl
 
-import enumeratum.{Enum, EnumEntry}
 import org.scalajs.dom.ext.KeyValue
 import sri.core.{ReactComponent, ReactElement}
-import sri.web.vdom.htmltagsNoInline._
 import sri.web.all._
+import sri.web.styles.WebStyleSheet
+import sri.web.vdom.htmltagsNoInline._
+import todomvc._
 
-import scalajs.js.annotation.ScalaJSDefined
+import scala.scalajs.js.annotation.ScalaJSDefined
 
 object TodoList {
-
-  case class Task(id: Int, txt: String, done: Boolean) {
-    override def equals(obj: scala.Any): Boolean = obj match {
-      case Task(otherId, _, _) => id == otherId
-      case _ => false
-    }
-  }
-
-  sealed trait Filter extends EnumEntry
-
-  object Filter extends Enum[Filter] {
-    val values = findValues
-
-    case object All extends Filter
-
-    case object Done extends Filter
-
-    case object Undone extends Filter
-
-  }
-
-  def getFilterFn(f: Filter): Task => Boolean = f match {
-    case Filter.All => _ => true
-    case Filter.Done => _.done
-    case Filter.Undone => !_.done
-  }
 
   case class State(tasks: Seq[Task], editing: Option[Task])
 
   case class Props(filter: Filter)
+
+
+  object MyStyles extends WebStyleSheet {
+    val pointer = style(
+      cursor := "pointer"
+    )
+  }
 
 
   @ScalaJSDefined
@@ -66,6 +48,7 @@ object TodoList {
           ), section(className = "main")(
             input(className = "toggle-all",
               `type` = "checkbox",
+              style = MyStyles.pointer,
               checked = if (state.tasks.nonEmpty && state.tasks.forall(_.done)) "checked" else "",
               onClick = { e: ReactMouseEventI =>
                 setState(state.copy(tasks = state.tasks.map(_.copy(done = e.target.checked))))
@@ -84,6 +67,7 @@ object TodoList {
                       setState(state.copy(editing = Some(task)))
                     })(
                     input(className = "toggle", `type` = "checkbox",
+                      style = MyStyles.pointer,
                       onChange = { e: ReactEvent =>
                         setState(state.copy(tasks = state.tasks.map { t =>
                           if (t == task)
@@ -95,6 +79,7 @@ object TodoList {
                     label()(task.txt),
                     button(
                       className = "destroy",
+                      style = MyStyles.pointer,
                       onClick = { e: ReactEvent =>
                         setState(state.copy(tasks = state.tasks.filter(_ != task)))
                       }

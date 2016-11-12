@@ -5,7 +5,7 @@ enablePlugins(ScalaJSPlugin)
 
 workbenchSettings
 
-scalaVersion in ThisBuild := "2.12.0"
+scalaVersion in ThisBuild := "2.11.8"
 
 name := "Example"
 

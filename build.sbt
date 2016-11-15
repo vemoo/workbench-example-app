@@ -1,9 +1,4 @@
-// Turn this project into a Scala.js project by importing these settings
-import com.lihaoyi.workbench.Plugin._
-
-enablePlugins(ScalaJSPlugin)
-
-workbenchSettings
+enablePlugins(ScalaJSPlugin, WorkbenchPlugin)
 
 scalaVersion in ThisBuild := "2.11.8"
 
@@ -20,7 +15,3 @@ libraryDependencies ++= Seq(
 )
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-Xfatal-warnings")
-
-bootSnippet := "todomvc.JSMain().main()"
-
-updateBrowsers <<= updateBrowsers.triggeredBy(fastOptJS in Compile)

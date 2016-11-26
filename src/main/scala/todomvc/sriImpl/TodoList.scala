@@ -11,10 +11,7 @@ import scala.scalajs.js.annotation.ScalaJSDefined
 
 object TodoList {
 
-  case class State(tasks: Seq[Task], editing: Option[Task])
-
   case class Props(filter: Filter)
-
 
   object MyStyles extends WebStyleSheet {
     val pointer = style(
@@ -22,10 +19,14 @@ object TodoList {
     )
   }
 
-
   @ScalaJSDefined
   class Component extends ReactComponent[Props, State] {
     initialState(State(Seq(), None))
+
+    def dispatch(a: TodoAction): Unit = {
+      val newState = update(a, state)
+      setState(newState)
+    }
 
     def render(): ReactElement = {
       div()(
@@ -37,10 +38,9 @@ object TodoList {
               placeholder = "Whats needs to be done?",
               onKeyUp = { e: ReactKeyboardEventI =>
                 if (e.key == KeyValue.Enter && e.target.value.trim.nonEmpty) {
-                  val newId = if (state.tasks.isEmpty) 1 else state.tasks.map(_.id).max + 1
-                  val newTask = Task(newId, e.target.value, false)
+                  val txt = e.target.value.trim
                   e.target.value = ""
-                  setState(state.copy(tasks = newTask +: state.tasks))
+                  dispatch(Add(txt))
                 }
               },
               autoFocus = state.editing.isEmpty
@@ -50,8 +50,8 @@ object TodoList {
               `type` = "checkbox",
               style = MyStyles.pointer,
               checked = if (state.tasks.nonEmpty && state.tasks.forall(_.done)) "checked" else "",
-              onClick = { e: ReactMouseEventI =>
-                setState(state.copy(tasks = state.tasks.map(_.copy(done = e.target.checked))))
+              onClick = { _: ReactMouseEventI =>
+                dispatch(ToggleAll)
               }
             ),
             label(htmlFor = "toggle-all")("Mark all as complete"),
@@ -63,45 +63,37 @@ object TodoList {
                   else ""
                 })(
                   div(className = "view",
-                    onDoubleClick = { e: ReactEvent =>
-                      setState(state.copy(editing = Some(task)))
+                    onDoubleClick = { _: ReactEvent =>
+                      dispatch(SetEditing(task))
                     })(
                     input(className = "toggle", `type` = "checkbox",
                       style = MyStyles.pointer,
-                      onChange = { e: ReactEvent =>
-                        setState(state.copy(tasks = state.tasks.map { t =>
-                          if (t == task)
-                            t.copy(done = !t.done)
-                          else t
-                        }))
+                      onChange = { _: ReactEvent =>
+                        dispatch(Toggle(task))
                       },
                       checked = if (task.done) "checked" else ""),
                     label()(task.txt),
                     button(
                       className = "destroy",
                       style = MyStyles.pointer,
-                      onClick = { e: ReactEvent =>
-                        setState(state.copy(tasks = state.tasks.filter(_ != task)))
+                      onClick = { _: ReactEvent =>
+                        dispatch(Delete(task))
                       }
                     )()),
                   state.editing match {
                     case Some(editing) => input(
                       className = "edit", value = editing.txt,
                       onInput = { e: ReactEventI =>
-                        setState(state.copy(editing = state.editing.map(_.copy(txt = e.target.value.trim))))
+                        dispatch(UpdateEditingText(e.target.value.trim))
                       },
                       onKeyUp = { e: ReactKeyboardEventI =>
                         if (e.key == KeyValue.Enter)
-                          setState(state.copy(tasks = state.tasks.map { t =>
-                            if (t == editing)
-                              t.copy(txt = editing.txt)
-                            else t
-                          }, editing = None))
+                          dispatch(ConfirmEditing)
                         else if (e.key == KeyValue.Escape)
-                          setState(state.copy(editing = None))
+                          dispatch(CancelEditing)
                       },
-                      onBlur = { e: ReactEvent =>
-                        setState(state.copy(editing = None))
+                      onBlur = { _: ReactEvent =>
+                        dispatch(CancelEditing)
                       },
                       autoFocus = true
                     )
@@ -121,7 +113,9 @@ object TodoList {
                   ))
                 }
               ), button(className = "clear-completed",
-                onClick = { e: ReactEvent => setState(state.copy(tasks = state.tasks.filter(!_.done))) })(
+                onClick = { _: ReactEvent =>
+                  dispatch(ClearCompleted)
+                })(
                 "Clear completed (", state.tasks.count(_.done), ")"
               )
             )
@@ -133,4 +127,3 @@ object TodoList {
 
   def apply() = makeElement[Component](Props(Filter.All))
 }
-

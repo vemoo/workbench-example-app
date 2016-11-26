@@ -12,7 +12,8 @@ object JSMain {
   }
 
   def reactMain(element: Element): Unit = {
-    japgolly.scalajs.react.ReactDOM.render(reactImpl.TodoList.router(), element)
+    japgolly.scalajs.react.ReactDOM
+      .render(reactImpl.TodoList.router(), element)
   }
 
   @JSExport

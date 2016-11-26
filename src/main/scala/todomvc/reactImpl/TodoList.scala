@@ -12,7 +12,7 @@ object TodoList {
 
   val initialState = State(Seq(), None)
 
-  class Backend($: BackendScope[Props, State]) {
+  class Backend($ : BackendScope[Props, State]) {
 
     def dispatch(a: TodoAction): Callback = {
       $.modState(s => update(a, s))
@@ -39,33 +39,25 @@ object TodoList {
             checked := task.done
           ),
           label(task.txt),
-          button(
-            cls := "destroy",
-            cursor := "pointer",
-            onClick --> {
-              dispatch(Delete(task))
-            }
-          )
+          button(cls := "destroy", cursor := "pointer", onClick --> {
+            dispatch(Delete(task))
+          })
         ),
         state.editing match {
           case Some(editing) =>
-            input(cls := "edit", value := editing.txt,
-              onInput ==> { e: ReactEventI =>
+            input(cls := "edit", value := editing.txt, onInput ==> {
+              e: ReactEventI =>
                 dispatch(UpdateEditingText(e.target.value.trim))
-              },
-              onKeyUp ==> { e: ReactKeyboardEventI =>
-                if (e.key == KeyValue.Enter)
-                  dispatch(ConfirmEditing)
-                else if (e.key == KeyValue.Escape)
-                  dispatch(CancelEditing)
-                else
-                  dispatch(NoOp)
-              },
-              onBlur --> {
+            }, onKeyUp ==> { e: ReactKeyboardEventI =>
+              if (e.key == KeyValue.Enter)
+                dispatch(ConfirmEditing)
+              else if (e.key == KeyValue.Escape)
                 dispatch(CancelEditing)
-              },
-              autoFocus := true
-            )
+              else
+                dispatch(NoOp)
+            }, onBlur --> {
+              dispatch(CancelEditing)
+            }, autoFocus := true)
           case None => ""
         }
       )
@@ -88,8 +80,7 @@ object TodoList {
             val txt = e.target.value.trim
             e.target.value = ""
             dispatch(Add(txt))
-          }
-          else dispatch(NoOp)
+          } else dispatch(NoOp)
         },
         autoFocus := state.editing.isEmpty
       )
@@ -112,35 +103,25 @@ object TodoList {
 
     def tasksListFooterElement(state: State, props: Props): ReactElement = {
       footer(cls := "footer")(
-        span(cls := "todo-count")(strong(state.tasks.count(!_.done)), " item left"),
-        ul(cls := "filters")(
-          for (filter <- Filter.values) yield {
-            li(a(
-              cls := {
-                if (filter == props.filter) "selected"
-                else ""
-              },
-              filter.toString,
-              href := props.ctl.urlFor(filter).value
-            ))
-          }
+        span(cls := "todo-count")(
+          strong(state.tasks.count(!_.done)),
+          " item left"
         ),
-        button(
-          cls := "clear-completed",
-          onClick --> {
-            dispatch(ClearCompleted)
-          },
-          "Clear completed (", state.tasks.count(_.done), ")"
-        )
+        ul(cls := "filters")(for (filter <- Filter.values) yield {
+          li(a(cls := {
+            if (filter == props.filter) "selected"
+            else ""
+          }, filter.toString, href := props.ctl.urlFor(filter).value))
+        }),
+        button(cls := "clear-completed", onClick --> {
+          dispatch(ClearCompleted)
+        }, "Clear completed (", state.tasks.count(_.done), ")")
       )
     }
 
     def render(props: Props, state: State): ReactElement = div(
       section(cls := "todoapp")(
-        header(cls := "header")(
-          h1("todos"),
-          newTaskElement(state)
-        ),
+        header(cls := "header")(h1("todos"), newTaskElement(state)),
         section(cls := "main")(
           toggleAllElement(state),
           tasksListElement(state, props),
@@ -149,7 +130,11 @@ object TodoList {
       ),
       footer(cls := "info")(
         p("Double-click to edit a todo"),
-        p(a(href := "https://github.com/lihaoyi/workbench-example-app/blob/todomvc/src/main/scala/example/ScalaJSExample.scala")("Source Code")),
+        p(
+          a(
+            href := "https://github.com/lihaoyi/workbench-example-app/blob/todomvc/src/main/scala/example/ScalaJSExample.scala"
+          )("Source Code")
+        ),
         p("Created by ", a(href := "http://github.com/lihaoyi")("Li Haoyi"))
       )
     )
@@ -160,20 +145,22 @@ object TodoList {
     .renderBackend[Backend]
     .build
 
-  val routerConfig: RouterConfig[Filter] = RouterConfigDsl[Filter].buildConfig { dsl =>
-    import dsl._
+  val routerConfig: RouterConfig[Filter] =
+    RouterConfigDsl[Filter].buildConfig { dsl =>
+      import dsl._
 
-    def filterRule(route: String, filter: Filter): Rule =
-      staticRoute(route, filter) ~> renderR(ctl => component(Props(filter, ctl)))
+      def filterRule(route: String, filter: Filter): Rule =
+        staticRoute(route, filter) ~> renderR(
+          ctl => component(Props(filter, ctl))
+        )
 
-    (trimSlashes
-      | filterRule("#all", Filter.All)
-      | filterRule("#done", Filter.Done)
-      | filterRule("#undone", Filter.Undone)
-      )
-      .notFound(redirectToPage(Filter.All)(Redirect.Replace))
+      (trimSlashes
+        | filterRule("#all", Filter.All)
+        | filterRule("#done", Filter.Done)
+        | filterRule("#undone", Filter.Undone))
+        .notFound(redirectToPage(Filter.All)(Redirect.Replace))
 
-  }
+    }
 
   val router = Router(BaseUrl.until_#, routerConfig)
 }

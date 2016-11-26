@@ -67,30 +67,31 @@ object benchmark {
   def delay0(): Future[Unit] = delay(0)
 
   def add100(): Future[Unit] = {
-    val newTodo = document.querySelector(".new-todo").asInstanceOf[HTMLInputElement]
+    val newTodo =
+      document.querySelector(".new-todo").asInstanceOf[HTMLInputElement]
     doForEach(1 to 100, (i: Int) => {
       newTodo.value = s"Task number $i"
       doEnter(newTodo)
     })
   }
 
-  def nodeListToIterable(nodeList: NodeList): Iterable[Node] = new Iterable[Node] {
-    def iterator: Iterator[Node] = new Iterator[Node] {
-      var i = 0
+  def nodeListToIterable(nodeList: NodeList): Iterable[Node] =
+    new Iterable[Node] {
+      def iterator: Iterator[Node] = new Iterator[Node] {
+        var i = 0
 
-      def hasNext: Boolean = nodeList.length > i
+        def hasNext: Boolean = nodeList.length > i
 
-      def next(): Node = {
-        val x = nodeList(i)
-        i += 1
-        x
+        def next(): Node = {
+          val x = nodeList(i)
+          i += 1
+          x
+        }
       }
     }
-  }
 
   def toggleAll(): Future[Unit] = {
-    val toggles = nodeListToIterable(
-      document.querySelectorAll(".toggle"))
+    val toggles = nodeListToIterable(document.querySelectorAll(".toggle"))
     doForEach(toggles, (node: Node) => {
       node.asInstanceOf[HTMLButtonElement].click()
     })
@@ -104,7 +105,8 @@ object benchmark {
 
         def hasNext: Boolean = button() != null
 
-        def next(): HTMLButtonElement = button().asInstanceOf[HTMLButtonElement]
+        def next(): HTMLButtonElement =
+          button().asInstanceOf[HTMLButtonElement]
       }
     }
 
@@ -122,17 +124,19 @@ object benchmark {
     }
   }
 
-  @JSExport
-  def run(): Unit = {
-    for {
-      _ <- benchmark()
-      t1 <- benchmark()
-      t2 <- benchmark()
-      t3 <- benchmark()
-      t4 <- benchmark()
-      t5 <- benchmark()
-    } yield {
-      window.alert((t1 + t1 + t3 + t4 + t5) / 5 + " ms");
+  def linearize[T](fs: Seq[() => Future[T]]): Future[Seq[T]] = {
+    fs.foldLeft(Future.successful(Seq.newBuilder[T])) { (fb, fx) =>
+      for {
+        b <- fb
+        x <- fx()
+      } yield b += x
     }
+      .map(_.result())
+  }
+
+  @JSExport
+  def run(times: Int = 3): Unit = {
+    val benches = (0 until times).map(_ => () => benchmark())
+    linearize(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))
   }
 }

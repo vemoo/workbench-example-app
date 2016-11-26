@@ -22,6 +22,6 @@ object JSMain {
     val mainDiv = document.createElement("div")
     document.body.appendChild(mainDiv)
 
-    sriMain(mainDiv)
+    reactMain(mainDiv)
   }
 }

@@ -8,15 +8,17 @@ import todomvc._
 
 object TodoList {
 
-  case class State(tasks: Seq[Task], editing: Option[Task])
   case class Props(filter: Filter, ctl: RouterCtl[Filter])
-
 
   val initialState = State(Seq(), None)
 
-
   class Backend($: BackendScope[Props, State]) {
-    def render(props: Props, state: State) = div(
+
+    def dispatch(a: TodoAction): Callback = {
+      $.modState(s => update(a, s))
+    }
+
+    def render(props: Props, state: State): ReactElement = div(
       section(cls := "todoapp")(
         header(cls := "header")(
           h1("todos"),
@@ -25,10 +27,9 @@ object TodoList {
             placeholder := "What needs to be done?",
             onKeyUp ==> { e: ReactKeyboardEventI =>
               if (e.key == KeyValue.Enter && e.target.value.trim.nonEmpty) {
-                val newId = if (state.tasks.isEmpty) 1 else state.tasks.map(_.id).max + 1
-                val newTask = Task(newId, e.target.value.trim, false)
+                val txt = e.target.value.trim
                 e.target.value = ""
-                $.setState(state.copy(tasks = newTask +: state.tasks))
+                dispatch(Add(txt))
               }
               else Callback(())
             },
@@ -41,8 +42,8 @@ object TodoList {
             tpe := "checkbox",
             cursor := "pointer",
             checked := state.tasks.nonEmpty && state.tasks.forall(_.done),
-            onClick ==> { e: ReactUIEventI =>
-              $.setState(state.copy(tasks = state.tasks.map(_.copy(done = e.target.checked))))
+            onClick --> {
+              dispatch(ToggleAll)
             }
           ),
           label(`for` := "toggle-all", "Mark all as complete"),
@@ -56,18 +57,14 @@ object TodoList {
                 },
                 div(cls := "view")(
                   onDblClick --> {
-                    $.setState(state.copy(editing = Some(task)))
+                    dispatch(SetEditing(task))
                   },
                   input(
                     cls := "toggle",
                     tpe := "checkbox",
                     cursor := "pointer",
                     onChange --> {
-                      $.setState(state.copy(tasks = state.tasks.map { t =>
-                        if (t == task)
-                          t.copy(done = !t.done)
-                        else t
-                      }))
+                      dispatch(Toggle(task))
                     },
                     checked := task.done
                   ),
@@ -76,7 +73,7 @@ object TodoList {
                     cls := "destroy",
                     cursor := "pointer",
                     onClick --> {
-                      $.setState(state.copy(tasks = state.tasks.filter(_ != task)))
+                      dispatch(Delete(task))
                     }
                   )
                 ),
@@ -84,22 +81,18 @@ object TodoList {
                   case Some(editing) =>
                     input(cls := "edit", value := editing.txt,
                       onInput ==> { e: ReactEventI =>
-                        $.setState(state.copy(editing = state.editing.map(_.copy(txt = e.target.value.trim))))
+                        dispatch(UpdateEditingText(e.target.value.trim))
                       },
                       onKeyUp ==> { e: ReactKeyboardEventI =>
                         if (e.key == KeyValue.Enter)
-                          $.setState(state.copy(tasks = state.tasks.map { t =>
-                            if (t == editing)
-                              t.copy(txt = editing.txt)
-                            else t
-                          }, editing = None))
+                          dispatch(ConfirmEditing)
                         else if (e.key == KeyValue.Escape)
-                          $.setState(state.copy(editing = None))
+                          dispatch(CancelEditing)
                         else
-                          Callback(())
+                          dispatch(NoOp)
                       },
                       onBlur --> {
-                        $.setState(state.copy(editing = None))
+                        dispatch(CancelEditing)
                       },
                       autoFocus := true
                     )
@@ -125,7 +118,7 @@ object TodoList {
             button(
               cls := "clear-completed",
               onClick --> {
-                $.setState(state.copy(tasks = state.tasks.filter(!_.done)))
+                dispatch(ClearCompleted)
               },
               "Clear completed (", state.tasks.count(_.done), ")"
             )
@@ -140,13 +133,12 @@ object TodoList {
     )
   }
 
-
   val component = ReactComponentB[Props]("TodoMVC")
     .initialState(initialState)
     .renderBackend[Backend]
     .build
 
-  val routerConfig = RouterConfigDsl[Filter].buildConfig { dsl =>
+  val routerConfig: RouterConfig[Filter] = RouterConfigDsl[Filter].buildConfig { dsl =>
     import dsl._
 
     def filterRule(route: String, filter: Filter): Rule =

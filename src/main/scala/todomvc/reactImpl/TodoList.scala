@@ -10,64 +10,22 @@ object TodoList {
 
   case class Props(filter: Filter, ctl: RouterCtl[Filter])
 
-  val initialState = State(Seq(), None)
+  private val initialState = State(Seq())
 
-  class Backend($ : BackendScope[Props, State]) {
+  private class Backend($ : BackendScope[Props, State]) {
 
-    def dispatch(a: TodoAction): Callback = {
-      $.modState(s => update(a, s))
-    }
-
-    def taskListItemElement(state: State, task: Task): ReactElement = {
-      li(
-        cls := {
-          if (task.done) "completed"
-          else if (state.editing.contains(task)) "editing"
-          else ""
-        },
-        div(cls := "view")(
-          onDblClick --> {
-            dispatch(SetEditing(task))
-          },
-          input(
-            cls := "toggle",
-            tpe := "checkbox",
-            cursor := "pointer",
-            onChange --> {
-              dispatch(Toggle(task))
-            },
-            checked := task.done
-          ),
-          label(task.txt),
-          button(cls := "destroy", cursor := "pointer", onClick --> {
-            dispatch(Delete(task))
-          })
-        ),
-        state.editing match {
-          case Some(editing) =>
-            input(cls := "edit", value := editing.txt, onInput ==> {
-              e: ReactEventI =>
-                dispatch(UpdateEditingText(e.target.value.trim))
-            }, onKeyUp ==> { e: ReactKeyboardEventI =>
-              if (e.key == KeyValue.Enter)
-                dispatch(ConfirmEditing)
-              else if (e.key == KeyValue.Escape)
-                dispatch(CancelEditing)
-              else
-                dispatch(NoOp)
-            }, onBlur --> {
-              dispatch(CancelEditing)
-            }, autoFocus := true)
-          case None => ""
-        }
-      )
+    def dispatch(a: TodoListAction): Callback = {
+      if (a == NoOp)
+        Callback(())
+      else
+        $.modState(s => update(a, s))
     }
 
     def tasksListElement(state: State, props: Props): ReactElement = {
       ul(cls := "todo-list")(
         state.tasks
           .filter(getFilterFn(props.filter))
-          .map(t => taskListItemElement(state, t))
+          .map(t => TodoListItem.component(TodoListItem.Props(t, dispatch)))
       )
     }
 
@@ -82,7 +40,7 @@ object TodoList {
             dispatch(Add(txt))
           } else dispatch(NoOp)
         },
-        autoFocus := state.editing.isEmpty
+        autoFocus := state.tasks.forall(_.editing.isEmpty)
       )
     }
 
@@ -140,12 +98,12 @@ object TodoList {
     )
   }
 
-  val component = ReactComponentB[Props]("TodoMVC")
+  private val component = ReactComponentB[Props]("TodoMVC")
     .initialState(initialState)
     .renderBackend[Backend]
     .build
 
-  val routerConfig: RouterConfig[Filter] =
+  private val routerConfig: RouterConfig[Filter] =
     RouterConfigDsl[Filter].buildConfig { dsl =>
       import dsl._
 

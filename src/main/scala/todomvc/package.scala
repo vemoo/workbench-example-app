@@ -2,9 +2,10 @@ import enumeratum.{Enum, EnumEntry}
 
 package object todomvc {
 
-  case class Task(id: Int, txt: String, done: Boolean) {
+  case class Task(txt: String, done: Boolean, editing: Option[String]) {
+    //tasks with same contents can be different tasks
     override def equals(obj: scala.Any): Boolean = obj match {
-      case Task(otherId, _, _) => id == otherId
+      case ar: AnyRef => ar.eq(this)
       case _ => false
     }
   }
@@ -23,61 +24,61 @@ package object todomvc {
   }
 
   def getFilterFn(f: Filter): Task => Boolean = f match {
-    case Filter.All => _ => true
+    case Filter.All =>
+      _ =>
+        true
     case Filter.Done => _.done
     case Filter.Undone => !_.done
   }
 
-  case class State(tasks: Seq[Task], editing: Option[Task])
+  case class State(tasks: Seq[Task])
 
-  sealed trait TodoAction
-  case class Add(txt: String) extends TodoAction
-  case class Toggle(task: Task) extends TodoAction
-  case class Delete(task: Task) extends TodoAction
-  case class SetEditing(task: Task) extends TodoAction
-  case class UpdateEditingText(newTxt: String) extends TodoAction
-  case object ConfirmEditing extends TodoAction
-  case object CancelEditing extends TodoAction
-  case object ToggleAll extends TodoAction
-  case object ClearCompleted extends TodoAction
-  case object NoOp extends TodoAction
+  sealed trait TodoListAction
 
-  def update(a: TodoAction, s: State): State = a match {
+  sealed trait TodoItemAction extends TodoListAction
+
+  case class Toggle(task: Task) extends TodoItemAction
+  case class Delete(task: Task) extends TodoItemAction
+  case class StartEditing(task: Task) extends TodoItemAction
+  case class UpdateEditing(task: Task, newTxt: String) extends TodoItemAction
+  case class ConfirmEditing(task: Task) extends TodoItemAction
+  case class CancelEditing(task: Task) extends TodoItemAction
+
+  case class Add(txt: String) extends TodoListAction
+  case object ToggleAll extends TodoListAction
+  case object ClearCompleted extends TodoListAction
+  case object NoOp extends TodoListAction
+
+  private def updateTask(task: Task, update: Task => Task, s: State): State = {
+    val newTasks = s.tasks.map(t => if (t == task) update(t) else t)
+    s.copy(tasks = newTasks)
+  }
+
+  def update(a: TodoListAction, s: State): State = a match {
     case Add(txt) =>
-      val newId = if (s.tasks.isEmpty) 1 else s.tasks.map(_.id).max + 1
-      val newTask = Task(newId, txt, done = false)
+      val newTask = Task(txt, done = false, editing = None)
       s.copy(tasks = newTask +: s.tasks)
 
     case Toggle(task) =>
-      val newTasks = s.tasks.map { t =>
-        if (t == task)
-          t.copy(done = !t.done)
-        else t
-      }
-      s.copy(tasks = newTasks)
+      updateTask(task, t => t.copy(done = !t.done), s)
 
     case Delete(task) =>
       val newTasks = s.tasks.filterNot(_ == task)
       s.copy(tasks = newTasks)
 
-    case SetEditing(task) =>
-      s.copy(editing = Some(task))
+    case StartEditing(task) =>
+      updateTask(task, t => t.copy(editing = Some(t.txt)), s)
 
-    case UpdateEditingText(txt) =>
-      val updEditingTask = s.editing.map(_.copy(txt = txt))
-      s.copy(editing = updEditingTask)
+    case UpdateEditing(task, newTxt) =>
+      updateTask(task, t => t.copy(editing = Some(newTxt)), s)
 
-    case ConfirmEditing => s.editing match {
-      case Some(editing) =>
-        s.copy(
-          tasks = s.tasks.map(t => if (t == editing) editing else t),
-          editing = None
-        )
-      case None => s
-    }
+    case ConfirmEditing(task) =>
+      updateTask(task,
+                 t => t.copy(txt = t.editing.getOrElse(t.txt), editing = None),
+                 s)
 
-    case CancelEditing =>
-      s.copy(editing = None)
+    case CancelEditing(task) =>
+      updateTask(task, t => t.copy(editing = None), s)
 
     case ToggleAll =>
       val newTasks =

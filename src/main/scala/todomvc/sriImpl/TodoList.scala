@@ -1,3 +1,4 @@
+/*
 package todomvc.sriImpl
 
 import org.scalajs.dom.ext.KeyValue
@@ -126,4 +127,4 @@ object TodoList {
   }
 
   def apply() = makeElement[Component](Props(Filter.All))
-}
+}*/

@@ -23,7 +23,7 @@ object TodoList {
 
     def tasksListElement(state: State, props: Props): ReactElement = {
       ul(cls := "todo-list")(
-        state.tasks
+        state.todos
           .filter(getFilterFn(props.filter))
           .map(t => TodoListItem.component(TodoListItem.Props(t, dispatch)))
       )
@@ -40,7 +40,7 @@ object TodoList {
             dispatch(Add(txt))
           } else dispatch(NoOp)
         },
-        autoFocus := state.tasks.forall(_.editing.isEmpty)
+        autoFocus := state.todos.forall(_.editing.isEmpty)
       )
     }
 
@@ -50,7 +50,7 @@ object TodoList {
           cls := "toggle-all",
           tpe := "checkbox",
           cursor := "pointer",
-          checked := state.tasks.nonEmpty && state.tasks.forall(_.done),
+          checked := state.todos.nonEmpty && state.todos.forall(_.done),
           onClick --> {
             dispatch(ToggleAll)
           }
@@ -62,7 +62,7 @@ object TodoList {
     def tasksListFooterElement(state: State, props: Props): ReactElement = {
       footer(cls := "footer")(
         span(cls := "todo-count")(
-          strong(state.tasks.count(!_.done)),
+          strong(state.todos.count(!_.done)),
           " item left"
         ),
         ul(cls := "filters")(for (filter <- Filter.values) yield {
@@ -73,7 +73,7 @@ object TodoList {
         }),
         button(cls := "clear-completed", onClick --> {
           dispatch(ClearCompleted)
-        }, "Clear completed (", state.tasks.count(_.done), ")")
+        }, "Clear completed (", state.todos.count(_.done), ")")
       )
     }
 

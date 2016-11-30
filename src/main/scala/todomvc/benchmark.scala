@@ -2,33 +2,37 @@ package todomvc
 
 import org.scalajs.dom.raw._
 import org.scalajs.dom.{document, window}
+import monix.execution.Scheduler.Implicits.global
+import monix.eval._
+import monix.execution.Cancelable
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
-import scala.util.Success
 
 @JSExport
 object benchmark {
 
   val inputEv: Event = {
     val e = document.createEvent("Events")
-    e.initEvent("input", true, true)
+    e.initEvent("input", canBubbleArg = true, cancelableArg = true)
     e
   }
 
   val enterDownEvent: Event = {
     val e = document.createEvent("Events")
-    e.initEvent("keydown", true, true)
-    e.asInstanceOf[js.Dynamic].keyCode = 13
+    e.initEvent("keydown", canBubbleArg = true, cancelableArg = true)
+    val eDyn = e.asInstanceOf[js.Dynamic]
+    eDyn.keyCode = 13
+    eDyn.which = 13
     e
   }
 
   val enterUpEvent: Event = {
     val e = document.createEvent("Events")
-    e.initEvent("keyup", true, true)
-    e.asInstanceOf[js.Dynamic].keyCode = 13
+    e.initEvent("keyup", canBubbleArg = true, cancelableArg = true)
+    val eDyn = e.asInstanceOf[js.Dynamic]
+    eDyn.keyCode = 13
+    eDyn.which = 13
     e
   }
 
@@ -38,38 +42,42 @@ object benchmark {
     el.dispatchEvent(enterUpEvent)
   }
 
-  def doForEach[T](xs: Iterable[T], action: T => Unit): Future[Unit] = {
-    val promise = Promise[Unit]
+  def interleavedForEach[T](xs: Iterable[T], action: T => Unit): Task[Unit] = {
+    Task.create[Unit] { (_, callback) =>
 
-    val it = xs.iterator
+      val it = xs.iterator
 
-    def step(): Unit = {
-      if (!it.hasNext)
-        promise.complete(Success(()))
-      else
-        window.setTimeout(() => {
-          action(it.next())
-          step()
-        }, 0)
+      var handle = 0
+
+      def step(): Unit = {
+        if (!it.hasNext)
+          callback.onSuccess(())
+        else
+          handle = window.setTimeout(() => {
+            action(it.next())
+            step()
+          }, 0)
+      }
+
+      step()
+
+      Cancelable { () => window.clearTimeout(handle) }
     }
-
-    step()
-
-    promise.future
   }
 
-  def delay(millis: Double): Future[Unit] = {
-    val promise = Promise[Unit]
-    window.setTimeout(() => promise.complete(Success(())), millis)
-    promise.future
+  def delay(millis: Double): Task[Unit] = {
+    Task.create[Unit] { (_, callback) =>
+      val handle = window.setTimeout(() => callback.onSuccess(()), millis)
+      Cancelable { () => window.clearTimeout(handle) }
+    }
   }
 
-  def delay0(): Future[Unit] = delay(0)
+  def delay0(): Task[Unit] = delay(0)
 
-  def add100(): Future[Unit] = {
+  def add100(): Task[Unit] = {
     val newTodo =
       document.querySelector(".new-todo").asInstanceOf[HTMLInputElement]
-    doForEach(1 to 100, (i: Int) => {
+    interleavedForEach(1 to 100, (i: Int) => {
       newTodo.value = s"Task number $i"
       doEnter(newTodo)
     })
@@ -90,53 +98,46 @@ object benchmark {
       }
     }
 
-  def toggleAll(): Future[Unit] = {
+  def whileExistsSelector[T <: Element](selector: String): Iterable[T] = new Iterable[T] {
+    def iterator: Iterator[T] = new Iterator[T] {
+
+      private def elem() = document.querySelector(selector)
+
+      def hasNext: Boolean = elem() != null
+
+      def next(): T = elem().asInstanceOf[T]
+    }
+  }
+
+  def toggleAll(): Task[Unit] = {
     val toggles = nodeListToIterable(document.querySelectorAll(".toggle"))
-    doForEach(toggles, (node: Node) => {
+    interleavedForEach(toggles, (node: Node) => {
       node.asInstanceOf[HTMLButtonElement].click()
     })
   }
 
-  def destroyAll(): Future[Unit] = {
-    val destroyButtons = new Iterable[HTMLButtonElement] {
-      def iterator = new Iterator[HTMLButtonElement] {
+  def destroyAll(): Task[Unit] = {
+    val destroyButtons = whileExistsSelector[HTMLButtonElement](".destroy")
+    interleavedForEach(destroyButtons, (b: HTMLButtonElement) => b.click())
+  }
 
-        def button(): Element = document.querySelector(".destroy")
-
-        def hasNext: Boolean = button() != null
-
-        def next(): HTMLButtonElement =
-          button().asInstanceOf[HTMLButtonElement]
+  def benchmark(): Task[Double] = {
+    Task.defer {
+      val t0 = window.performance.now()
+      for {
+        _ <- add100()
+        _ <- toggleAll()
+        _ <- destroyAll()
+      } yield {
+        window.performance.now() - t0
       }
     }
-
-    doForEach(destroyButtons, (b: HTMLButtonElement) => b.click())
-  }
-
-  def benchmark(): Future[Double] = {
-    val t0 = window.performance.now()
-    for {
-      _ <- add100()
-      _ <- toggleAll()
-      _ <- destroyAll()
-    } yield {
-      window.performance.now() - t0
-    }
-  }
-
-  def linearize[T](fs: Seq[() => Future[T]]): Future[Seq[T]] = {
-    fs.foldLeft(Future.successful(Seq.newBuilder[T])) { (fb, fx) =>
-      for {
-        b <- fb
-        x <- fx()
-      } yield b += x
-    }
-      .map(_.result())
   }
 
   @JSExport
   def run(times: Int = 3): Unit = {
-    val benches = (0 until times).map(_ => () => benchmark())
-    linearize(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))
+    val benches = (0 until times).map(_ => benchmark())
+    Task.sequence(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))
   }
+
 }

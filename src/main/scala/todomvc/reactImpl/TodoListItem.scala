@@ -13,7 +13,7 @@ import org.scalajs.dom.ext.KeyValue
 import todomvc._
 
 object TodoListItem {
-  case class Props(task: Task, dispatch: TodoItemAction => Callback)
+  case class Props(task: Todo, dispatch: TodoItemAction => Callback)
 
   private def render(p: Props): ReactElement = {
     li(
@@ -61,9 +61,8 @@ object TodoListItem {
     )
   }
 
-  implicit val taskReuse: Reusability[Task] = Reusability.by_==
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.task)
-
+  private implicit val taskReuse: Reusability[Todo] = Reusability.by_==
+  private implicit val propsReuse: Reusability[Props] = Reusability.by(_.task)
   val component = ReactComponentB[Props]("TodoListItem")
     .render_P(render)
     .configure(Reusability.shouldComponentUpdate)

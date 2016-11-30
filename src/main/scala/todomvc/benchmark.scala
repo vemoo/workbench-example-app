@@ -1,11 +1,14 @@
 package todomvc
 
+import java.util.concurrent.TimeUnit
+
 import org.scalajs.dom.raw._
 import org.scalajs.dom.{document, window}
 import monix.execution.Scheduler.Implicits.global
 import monix.eval._
 import monix.execution.Cancelable
 
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
@@ -43,32 +46,32 @@ object benchmark {
   }
 
   def interleavedForEach[T](xs: Iterable[T], action: T => Unit): Task[Unit] = {
-    Task.create[Unit] { (_, callback) =>
-
+    Task.create[Unit] { (scheduler, callback) =>
       val it = xs.iterator
 
-      var handle = 0
+      var cancelable = Cancelable.empty
 
       def step(): Unit = {
         if (!it.hasNext)
           callback.onSuccess(())
         else
-          handle = window.setTimeout(() => {
+          cancelable = scheduler.scheduleOnce(Duration.Zero) {
             action(it.next())
             step()
-          }, 0)
+          }
       }
 
       step()
 
-      Cancelable { () => window.clearTimeout(handle) }
+      cancelable
     }
   }
 
-  def delay(millis: Double): Task[Unit] = {
-    Task.create[Unit] { (_, callback) =>
-      val handle = window.setTimeout(() => callback.onSuccess(()), millis)
-      Cancelable { () => window.clearTimeout(handle) }
+  def delay(millis: Long): Task[Unit] = {
+    Task.create[Unit] { (scheduler, callback) =>
+      scheduler.scheduleOnce(FiniteDuration(millis, TimeUnit.MILLISECONDS)) {
+        callback.onSuccess(())
+      }
     }
   }
 
@@ -98,16 +101,17 @@ object benchmark {
       }
     }
 
-  def whileExistsSelector[T <: Element](selector: String): Iterable[T] = new Iterable[T] {
-    def iterator: Iterator[T] = new Iterator[T] {
+  def whileExistsSelector[T <: Element](selector: String): Iterable[T] =
+    new Iterable[T] {
+      def iterator: Iterator[T] = new Iterator[T] {
 
-      private def elem() = document.querySelector(selector)
+        private def elem() = document.querySelector(selector)
 
-      def hasNext: Boolean = elem() != null
+        def hasNext: Boolean = elem() != null
 
-      def next(): T = elem().asInstanceOf[T]
+        def next(): T = elem().asInstanceOf[T]
+      }
     }
-  }
 
   def toggleAll(): Task[Unit] = {
     val toggles = nodeListToIterable(document.querySelectorAll(".toggle"))

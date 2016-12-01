@@ -12,37 +12,27 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
+
 @JSExport
 object benchmark {
 
-  val inputEv: Event = {
+  def createEvent(eType: String, attrs: (String, js.Any)*): Event = {
     val e = document.createEvent("Events")
-    e.initEvent("input", canBubbleArg = true, cancelableArg = true)
+    e.initEvent(eType, canBubbleArg = true, cancelableArg = true)
+    attrs.foreach { case (k, v) =>
+      e.asInstanceOf[js.Dynamic].updateDynamic(k)(v)
+    }
     e
   }
 
-  val enterDownEvent: Event = {
-    val e = document.createEvent("Events")
-    e.initEvent("keydown", canBubbleArg = true, cancelableArg = true)
-    val eDyn = e.asInstanceOf[js.Dynamic]
-    eDyn.keyCode = 13
-    eDyn.which = 13
-    e
-  }
-
-  val enterUpEvent: Event = {
-    val e = document.createEvent("Events")
-    e.initEvent("keyup", canBubbleArg = true, cancelableArg = true)
-    val eDyn = e.asInstanceOf[js.Dynamic]
-    eDyn.keyCode = 13
-    eDyn.which = 13
-    e
-  }
+  val inputEv: Event = createEvent("input")
+  val enterDownEvent: Event = createEvent("keydown", "keyCode" -> 13)
+  val enterPressEvent: Event = createEvent("keypress", "keyCode" -> 13)
+  val enterUpEvent: Event = createEvent("keyup", "keyCode" -> 13)
 
   def doEnter(el: Element): Unit = {
-    el.dispatchEvent(inputEv)
-    el.dispatchEvent(enterDownEvent)
-    el.dispatchEvent(enterUpEvent)
+    val events = Seq(inputEv, enterDownEvent, enterPressEvent, enterUpEvent)
+    events.foreach(el.dispatchEvent)
   }
 
   def interleavedForEach[T](xs: Iterable[T], action: T => Unit): Task[Unit] = {
@@ -77,10 +67,13 @@ object benchmark {
 
   def delay0(): Task[Unit] = delay(0)
 
-  def add100(): Task[Unit] = {
-    val newTodo =
-      document.querySelector(".new-todo").asInstanceOf[HTMLInputElement]
-    interleavedForEach(1 to 100, (i: Int) => {
+  def add(n: Int): Task[Unit] = {
+    val newTodo = {
+      val x = document.querySelector(".new-todo")
+      if (x == null) document.querySelector("#new-todo")
+      else x
+    }.asInstanceOf[HTMLInputElement]
+    interleavedForEach(1 to n, (i: Int) => {
       newTodo.value = s"Task number $i"
       doEnter(newTodo)
     })
@@ -129,7 +122,7 @@ object benchmark {
     Task.defer {
       val t0 = window.performance.now()
       for {
-        _ <- add100()
+        _ <- add(100)
         _ <- toggleAll()
         _ <- destroyAll()
       } yield {
@@ -144,4 +137,5 @@ object benchmark {
     Task.sequence(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))
   }
 
+  //run(1)
 }

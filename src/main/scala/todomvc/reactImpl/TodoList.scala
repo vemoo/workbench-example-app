@@ -12,7 +12,7 @@ object TodoList {
 
   private val initialState = State(Seq())
 
-  private class Backend($ : BackendScope[Props, State]) {
+  private class Backend($: BackendScope[Props, State]) {
 
     def dispatch(a: TodoListAction): Callback = {
       if (a == NoOp)
@@ -21,19 +21,19 @@ object TodoList {
         $.modState(s => update(a, s))
     }
 
-    def tasksListElement(state: State, props: Props): ReactElement = {
-      ul(cls := "todo-list")(
+    def tasksListElement(state: State, props: Props): VdomElement = {
+      ul(cls := "todo-list",
         state.todos
           .filter(getFilterFn(props.filter))
-          .map(t => TodoListItem.component(TodoListItem.Props(t, dispatch)))
+          .toTagMod(t => TodoListItem.component(TodoListItem.Props(t, dispatch)))
       )
     }
 
-    def newTaskElement(state: State): ReactElement = {
+    def newTaskElement(state: State): VdomElement = {
       input(
         cls := "new-todo",
         placeholder := "What needs to be done?",
-        onKeyUp ==> { e: ReactKeyboardEventI =>
+        onKeyUp ==> { e: ReactKeyboardEventFromInput =>
           if (e.key == KeyValue.Enter && e.target.value.trim.nonEmpty) {
             val txt = e.target.value.trim
             e.target.value = ""
@@ -44,7 +44,7 @@ object TodoList {
       )
     }
 
-    def toggleAllElement(state: State): ReactElement = {
+    def toggleAllElement(state: State): VdomElement = {
       div(
         input(
           cls := "toggle-all",
@@ -59,13 +59,13 @@ object TodoList {
       )
     }
 
-    def tasksListFooterElement(state: State, props: Props): ReactElement = {
+    def tasksListFooterElement(state: State, props: Props): VdomElement = {
       footer(cls := "footer")(
         span(cls := "todo-count")(
           strong(state.todos.count(!_.done)),
           " item left"
         ),
-        ul(cls := "filters")(for (filter <- Filter.values) yield {
+        ul(cls := "filters", Filter.values.toTagMod { filter =>
           li(a(cls := {
             if (filter == props.filter) "selected"
             else ""
@@ -77,7 +77,7 @@ object TodoList {
       )
     }
 
-    def render(props: Props, state: State): ReactElement = div(
+    def render(props: Props, state: State): VdomElement = div(
       section(cls := "todoapp")(
         header(cls := "header")(h1("todos"), newTaskElement(state)),
         section(cls := "main")(
@@ -98,7 +98,7 @@ object TodoList {
     )
   }
 
-  private val component = ReactComponentB[Props]("TodoMVC")
+  private val component = ScalaComponent.builder[Props]("TodoMVC")
     .initialState(initialState)
     .renderBackend[Backend]
     .build

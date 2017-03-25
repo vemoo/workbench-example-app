@@ -4,10 +4,9 @@ import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.all._
 import japgolly.scalajs.react.{
   Callback,
-  ReactComponentB,
-  ReactElement,
-  ReactEventI,
-  ReactKeyboardEventI
+  ScalaComponent,
+  ReactEventFromInput,
+  ReactKeyboardEventFromInput
 }
 import org.scalajs.dom.ext.KeyValue
 import todomvc._
@@ -15,7 +14,7 @@ import todomvc._
 object TodoListItem {
   case class Props(task: Todo, dispatch: TodoItemAction => Callback)
 
-  private def render(p: Props): ReactElement = {
+  private def render(p: Props): VdomElement = {
     li(
       cls := {
         if (p.task.done) "completed"
@@ -43,9 +42,9 @@ object TodoListItem {
       p.task.editing match {
         case Some(editing) =>
           input(cls := "edit", value := editing, onInput ==> {
-            e: ReactEventI =>
+            e: ReactEventFromInput =>
               p.dispatch(UpdateEditing(p.task, e.target.value.trim))
-          }, onKeyUp ==> { e: ReactKeyboardEventI =>
+          }, onKeyUp ==> { e: ReactKeyboardEventFromInput =>
             if (e.key == KeyValue.Enter)
               p.dispatch(ConfirmEditing(p.task))
             else if (e.key == KeyValue.Escape)
@@ -63,7 +62,8 @@ object TodoListItem {
 
   private implicit val taskReuse: Reusability[Todo] = Reusability.by_==
   private implicit val propsReuse: Reusability[Props] = Reusability.by(_.task)
-  val component = ReactComponentB[Props]("TodoListItem")
+  //noinspection TypeAnnotation
+  val component = ScalaComponent.builder[Props]("TodoListItem")
     .render_P(render)
     .configure(Reusability.shouldComponentUpdate)
     .build

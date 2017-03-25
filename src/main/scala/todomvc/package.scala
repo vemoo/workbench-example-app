@@ -1,5 +1,7 @@
 import enumeratum.{Enum, EnumEntry}
 
+import scala.collection.immutable
+
 package object todomvc {
 
   case class Todo(txt: String, done: Boolean, editing: Option[String]) {
@@ -13,7 +15,7 @@ package object todomvc {
   sealed trait Filter extends EnumEntry
 
   object Filter extends Enum[Filter] {
-    val values = findValues
+    val values: Seq[Filter] = findValues
 
     case object All extends Filter
 

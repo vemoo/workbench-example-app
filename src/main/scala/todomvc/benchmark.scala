@@ -10,10 +10,10 @@ import monix.execution.Cancelable
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 
-@JSExport
+
 object benchmark {
 
   def createEvent(eType: String, attrs: (String, js.Any)*): Event = {
@@ -131,7 +131,7 @@ object benchmark {
     }
   }
 
-  @JSExport
+  @JSExportTopLevel("todomvc.benchmark.run")
   def run(times: Int = 3): Unit = {
     val benches = (0 until times).map(_ => benchmark())
     Task.sequence(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))

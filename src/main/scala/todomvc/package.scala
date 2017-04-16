@@ -15,7 +15,7 @@ package object todomvc {
   sealed trait Filter extends EnumEntry
 
   object Filter extends Enum[Filter] {
-    val values: Seq[Filter] = findValues
+    val values: immutable.IndexedSeq[Filter] = findValues
 
     case object All extends Filter
 
@@ -40,15 +40,23 @@ package object todomvc {
   sealed trait TodoItemAction extends TodoListAction
 
   case class Toggle(todo: Todo) extends TodoItemAction
+
   case class Delete(todo: Todo) extends TodoItemAction
+
   case class StartEditing(todo: Todo) extends TodoItemAction
+
   case class UpdateEditing(todo: Todo, newTxt: String) extends TodoItemAction
+
   case class ConfirmEditing(todo: Todo) extends TodoItemAction
+
   case class CancelEditing(todo: Todo) extends TodoItemAction
 
   case class Add(txt: String) extends TodoListAction
+
   case object ToggleAll extends TodoListAction
+
   case object ClearCompleted extends TodoListAction
+
   case object NoOp extends TodoListAction
 
   private def updateTodo(task: Todo, update: Todo => Todo, s: State): State = {
@@ -76,8 +84,8 @@ package object todomvc {
 
     case ConfirmEditing(todo) =>
       updateTodo(todo,
-                 t => t.copy(txt = t.editing.getOrElse(t.txt), editing = None),
-                 s)
+        t => t.copy(txt = t.editing.getOrElse(t.txt), editing = None),
+        s)
 
     case CancelEditing(todo) =>
       updateTodo(todo, t => t.copy(editing = None), s)

@@ -26,9 +26,7 @@ package object todomvc {
   }
 
   def getFilterFn(f: Filter): Todo => Boolean = f match {
-    case Filter.All =>
-      _ =>
-        true
+    case Filter.All => _ => true
     case Filter.Done => _.done
     case Filter.Undone => !_.done
   }

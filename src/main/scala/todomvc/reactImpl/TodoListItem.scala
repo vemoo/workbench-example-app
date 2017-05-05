@@ -50,8 +50,7 @@ object TodoListItem {
             else if (e.key == KeyValue.Escape)
               p.dispatch(CancelEditing(p.task))
             else
-              //p.dispatch(NoOp)
-              Callback(())
+              p.dispatch(NoOp)              
           }, onBlur --> {
             p.dispatch(CancelEditing(p.task))
           }, autoFocus := true)

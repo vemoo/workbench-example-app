@@ -58,7 +58,7 @@ object TodoMVC {
 
   case object ClearCompleted extends TodoListAction
 
-  case object NoOp extends TodoListAction
+  case object NoOp extends TodoListAction with TodoItemAction
 
   private def updateTodo(task: Todo, update: Todo => Todo, s: State): State = {
     val newTasks = s.todos.map(t => if (t == task) update(t) else t)

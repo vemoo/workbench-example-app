@@ -135,6 +135,7 @@ object benchmark {
   def run(times: Int = 3): Unit = {
     val benches = (0 until times).map(_ => benchmark())
     Task.sequence(benches).foreach(ts => println(s"${ts.sum / ts.size} ms"))
+    ()
   }
 
   //run(1)

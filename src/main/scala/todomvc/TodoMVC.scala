@@ -1,8 +1,11 @@
+package todomvc
+
 import enumeratum.{Enum, EnumEntry}
 
 import scala.collection.immutable
 
-package object todomvc {
+
+object TodoMVC {
 
   case class Todo(txt: String, done: Boolean, editing: Option[String]) {
     //todos with same contents can be different todos

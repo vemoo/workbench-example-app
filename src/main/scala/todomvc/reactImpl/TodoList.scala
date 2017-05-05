@@ -4,7 +4,7 @@ import japgolly.scalajs.react.{BackendScope, _}
 import japgolly.scalajs.react.extra.router.{RouterCtl, _}
 import japgolly.scalajs.react.vdom.all._
 import org.scalajs.dom.ext.KeyValue
-import todomvc._
+import todomvc.TodoMVC._
 
 object TodoList {
 

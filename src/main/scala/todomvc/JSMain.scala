@@ -10,6 +10,7 @@ object JSMain extends JSApp{
 
   def reactMain(element: Element): Unit = {
     reactImpl.TodoList.router().renderIntoDOM(element)
+    ()
   }
 
   @JSExportTopLevel("todomvc.JSMain.main")

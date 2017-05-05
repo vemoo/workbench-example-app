@@ -9,7 +9,7 @@ import japgolly.scalajs.react.{
   ReactKeyboardEventFromInput
 }
 import org.scalajs.dom.ext.KeyValue
-import todomvc._
+import todomvc.TodoMVC._
 
 object TodoListItem {
   case class Props(task: Todo, dispatch: TodoItemAction => Callback)

@@ -13,12 +13,10 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 
-
 object benchmark {
 
   def createEvent(eType: String, attrs: (String, js.Any)*): Event = {
-    val e = document.createEvent("Events")
-    e.initEvent(eType, canBubbleArg = true, cancelableArg = true)
+    val e = js.Dynamic.newInstance(js.Dynamic.global.Event)(eType, js.Dynamic.literal(bubbles = true, cancelable = true)).asInstanceOf[Event]
     attrs.foreach { case (k, v) =>
       e.asInstanceOf[js.Dynamic].updateDynamic(k)(v)
     }

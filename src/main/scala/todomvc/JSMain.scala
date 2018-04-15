@@ -2,11 +2,10 @@ package todomvc
 
 import org.scalajs.dom.raw.Element
 
-import scala.scalajs.js.JSApp
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 
-object JSMain extends JSApp{
+object JSMain {
 
   def reactMain(element: Element): Unit = {
     reactImpl.TodoList.router().renderIntoDOM(element)
